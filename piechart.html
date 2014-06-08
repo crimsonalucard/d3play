@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<script>
+		var dataset = [ 5, 10, 20, 45, 6, 25 ];
+		var pie = d3.layout.pie();
+
+		var w = 300;
+		var h = 300;
+
+		var outerRadius = w/2;
+		var innerRadius = w/3;
+
+		var arc = d3.svg.arc()
+				.innerRadius(innerRadius)
+				.outerRadius(outerRadius);
+		//this creates a function of the form function(d, i)
+		//it will return the string necessary to put in "d"
+		//for svg path elements if you want to generate an
+		//arc related to a pie chart!
+		var color = d3.scale.category10();
+
+
+		var svg = d3.select("body")
+				.append("svg")
+				.attr({
+					width:w,
+					height:h
+				});
+
+		var arcs = svg.selectAll("g.arc")
+				.data(pie(dataset))
+				.enter()
+				.append("g")
+				.attr("class", "arc")
+				.attr("transform", "translate("+outerRadius+", "+outerRadius+")");
+
+		arcs.append("path")
+				.attr({
+					"fill": function(d, i){
+						return color(i);
+					},
+					"d":arc
+				});
+
+		arcs.append("text")
+				.attr("transform", function(d){
+					return "translate(" + arc.centroid(d) + ")";
+				})
+				.attr("text-anchor", "middle")
+				.text(function(d){
+					return d.value;
+				})
+
+
+	</script>
+
+</body>
+</html>

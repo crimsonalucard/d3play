@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+
+
+</head>
+<body>
+
+    <p id="regen">Regenerate data.</p>
+    <p id="add">Add a bar.</p>
+    <p id="sub">Remove a bar.</p>
+	<script>
+		function generateArray(arraySize, valueGenerator){
+			var result = [];
+			for(var i = 0; i<arraySize; i++){
+				var innerArray = valueGenerator(i);
+				result.push(innerArray);
+			}
+			return result;
+		}
+
+		function generateArrayOfRandomNumbers(arraySize, min, max){
+			return generateArray(arraySize, function(i){
+				return Math.floor(min+(Math.random()*(max-min)));
+			});
+		}
+
+		function generate2dArrayOfRandomNumbers(arraySize, internalSize, min, max){
+			return generateArray(arraySize, function(){
+				return generateArrayOfRandomNumbers(internalSize, min, max)
+			});
+		}
+		function sortBars(svg){
+			svg.selectAll("rect")
+					.sort(function(a, b){
+						return d3.ascending(a, b);
+					})
+					.transition()
+					.duration(1000)
+					.attr("x", function(d, i){
+						return xScale(i);
+					})
+		}
+
+
+		var height = window.innerHeight;
+		var width = window.innerWidth;
+		console.log(height);
+		var padding = 0.05;
+		var lowerLimit = 0;
+		var upperLimit = 100;
+		var initialAmountOfData = 20;
+		var totalColors = 255;
+		var animationDuration = 200;
+		var dataset = generateArrayOfRandomNumbers(initialAmountOfData, lowerLimit, upperLimit);
+		var max = d3.max(dataset);
+		var xScale = d3.scale.ordinal()
+				.domain(d3.range(dataset.length))
+				.rangeRoundBands([lowerLimit,width], padding);
+		var yScale = d3.scale.linear()
+				.domain([lowerLimit, max])
+				.range([lowerLimit, height]);
+
+		var svg = d3.select("body").append("svg").attr({
+			height:height,
+			width:width
+		});
+
+
+		svg.selectAll("rect")
+			.data(dataset)
+			.enter()
+			.append("rect")
+			.attr("x", function(d, i){
+					return xScale(i);
+			})
+			.attr("y",function(d, i){
+					return height-yScale(d);
+			})
+			.attr("height",function(d){
+					return yScale(d)
+			})
+			.attr("width", xScale.rangeBand())
+			.attr("fill",function(d){
+					return "rgb(0,0,"+Math.floor((d/max)*totalColors).toString()+")";
+			})
+			.on("mouseover", function(){
+				d3.select(this).attr("fill", "orange");
+			})
+			.on("mouseout", function(){
+				d3.select(this).transition().duration(animationDuration).attr("fill", function(d){
+					return "rgb(0,0,"+Math.floor((d/max)*totalColors).toString()+")";
+				})
+			})
+			.on("click", function(){
+				sortBars(svg);
+			});
+
+
+		d3.select("#regen").on("click", function(){
+			dataset = generateArrayOfRandomNumbers(dataset.length, lowerLimit, upperLimit);
+			max = d3.max(dataset);
+			yScale.domain([lowerLimit, max]);
+			svg.selectAll("rect").data(dataset).transition().duration(animationDuration).delay(function(d, i){
+				return i*animationDuration/10;
+			}).attr({
+				"y":function(d){
+					return height-yScale(d);
+				},
+				"height":function(d){
+					return yScale(d);
+				},
+				"fill":function(d){
+					return "rgb(0,0,"+Math.floor((d/max)*totalColors).toString()+")";
+				}
+			});
+		});
+
+		d3.select("#add").on("click", function(){
+			var newNumber = Math.floor(Math.random()*(upperLimit-lowerLimit)+lowerLimit);
+			dataset.push(newNumber);
+			xScale.domain(d3.range(dataset.length));
+
+			//add in the new bar without updating scales...
+			svg.selectAll("rect").data(dataset).enter().append("rect").attr({
+				x:width,
+				y:function(d){
+					return height-yScale(d);
+				},
+				height:function(d){
+					return yScale(d);
+				},
+				width:xScale.rangeBand(),
+				fill: function(d){
+					return "rgb(0,0,"+Math.floor((d/max)*totalColors).toString()+")";
+				}
+			});
+
+			//update positions and widths.
+			svg.selectAll("rect").transition().duration(animationDuration).delay(function(d, i){
+				return i*animationDuration/10;
+			}).attr({
+				x:function(d, i){
+					return xScale(i);
+				},
+				width: xScale.rangeBand()
+			})
+		});
+
+		d3.select("#sub").on("click", function(){
+			dataset.pop();
+			xScale.domain(d3.range(dataset.length));
+
+			svg.selectAll("rect").transition().duration(animationDuration).delay(function(d, i){
+				return i*animationDuration/10;
+			}).attr({
+				x:function(d,i){
+					return xScale(i);
+				},
+				width:xScale.rangeBand()
+			})
+			.each("end", function(d, i){
+				if(i===dataset.length-1)
+				{
+					console.log("found final element!");
+					d3.select(this).remove();
+				}
+			});
+
+		});
+
+	</script>
+</body>
+</html>

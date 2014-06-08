@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+   <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<style>
+			.axis path,
+			.axis line {
+				fill: none;
+				stroke: black;
+				shape-rendering: crispEdges;
+			}
+
+			.axis text {
+				font-family: sans-serif;
+				font-size: 11px;
+			}
+	</style>
+</head>
+<body>
+
+<script>
+	function generateArray(arraySize, valueGenerator){
+		var result = [];
+		for(var i = 0; i<arraySize; i++){
+			var innerArray = valueGenerator(i);
+			result.push(innerArray);
+		}
+		return result;
+	}
+
+	function generateArrayOfRandomNumbers(arraySize, min, max){
+		return generateArray(arraySize, function(i){
+			return Math.floor(min+(Math.random()*(max-min)));
+		});
+	}
+
+	function generate2dArrayOfRandomNumbers(arraySize, internalSize, min, max){
+		return generateArray(arraySize, function(){
+			return generateArrayOfRandomNumbers(internalSize, min, max)
+		});
+	}
+
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+	var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height);
+
+	var dataset = generate2dArrayOfRandomNumbers(30, 2, 0, 500);
+	var xMax = d3.max(dataset, function(d){
+		return d[0];
+	});
+	var yMax = d3.max(dataset, function(d){
+		return d[1];
+	});
+
+
+	var padding = 100;
+	var xTicks, yTicks = 10;
+	var xScale = d3.scale.linear().domain([0, xMax]).range([padding, width-padding]);
+	var yScale = d3.scale.linear().domain([0, yMax]).range([height-padding, padding]);
+
+
+	var xAxis = d3.svg.axis()
+			.scale(xScale)
+			.orient("bottom")
+			.ticks(xTicks);
+
+	var yAxis = d3.svg.axis()
+		.scale(yScale)
+		.orient("left")
+		.ticks(yTicks);
+
+
+	var dotRadius = 3;
+
+	svg.append("clipPath")//create clippath.
+	    .attr("id", "chart-area")
+	    .append("rect")
+	    .attr("x", padding)
+	    .attr("y", padding)
+	    .attr("width", width - padding*2)
+	    .attr("height", height - padding*2);
+
+	var dots = svg
+			.append("g")
+            .attr("id", "circles")
+            .attr("clip-path", "url(#chart-area)")
+			.selectAll("circle")
+			.data(dataset)
+			.enter()
+			.append("circle")
+			.attr({
+				"r":dotRadius,
+				"cx":0,
+				"cy":height
+			});
+
+	function sync(){
+		dataset = generate2dArrayOfRandomNumbers(30, 2, 0, 500)
+		dots.data(dataset)
+			.transition()
+			.each("start", function(){
+				d3.select(this)
+						.attr("fill", "magenta")
+						.attr("r", dotRadius*2);
+			})
+			.attr('cx', function(data){
+				return xScale(data[0]);
+			})
+			.attr('cy', function(data){
+				return yScale(data[1]);
+			})
+			.each("end", function(){
+				d3.select(this)
+						.transition()
+						.attr("fill", "black")
+						.attr("r", dotRadius);
+			})
+	}
+
+	sync();
+
+	//Create X axis
+	svg.append("g")
+		.attr("class", "axis")
+		.attr("transform", "translate(0," + (height - padding) + ")")
+		.call(xAxis);
+
+	//Create Y axis
+	svg.append("g")
+		.attr("class", "axis")
+		.attr("transform", "translate(" + padding + ",0)")
+		.call(yAxis);
+
+	svg.on("click", sync);
+
+
+
+
+
+</script>
+</body>
+</html>
